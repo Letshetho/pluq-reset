@@ -13,14 +13,16 @@ app.use(express.json());
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing Supabase environment variables');
-  console.error('Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
-  process.exit(1);
-}
-
 // Create Supabase client with service role key for admin operations
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+let supabase = null;
+if (supabaseUrl && supabaseServiceKey) {
+  supabase = createClient(supabaseUrl, supabaseServiceKey);
+  console.log('✅ Supabase client initialized');
+} else {
+  console.warn('⚠️ Missing Supabase environment variables');
+  console.warn('Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
+  console.warn('Server will start but password reset will not work until variables are set');
+}
 
 // Password reset endpoint
 app.post('/api/auth/reset-password', async (req, res) => {
@@ -34,6 +36,12 @@ app.post('/api/auth/reset-password', async (req, res) => {
     if (!email || !token || !newPassword) {
       return res.status(400).json({ 
         error: 'Missing required fields: email, token, newPassword' 
+      });
+    }
+    
+    if (!supabase) {
+      return res.status(500).json({ 
+        error: 'Server configuration error: Supabase not initialized. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.' 
       });
     }
     
