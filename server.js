@@ -92,14 +92,30 @@ app.post('/api/auth/reset-password', async (req, res) => {
     const { data, error } = await supabase.auth.admin.updateUserById(
       user.id,
       { 
-        password: newPassword,
-        email_confirmed_at: new Date().toISOString()  // Confirm email after password reset
+        password: newPassword
       }
     );
     
     if (error) {
       console.error('❌ Error updating password:', error);
       return res.status(500).json({ error: 'Failed to update password' });
+    }
+    
+    // Now confirm the email separately
+    console.log('🔐 Confirming email...');
+    const { data: confirmData, error: confirmError } = await supabase.auth.admin.updateUserById(
+      user.id,
+      { 
+        email_confirm: true
+      }
+    );
+    
+    if (confirmError) {
+      console.error('❌ Error confirming email:', confirmError);
+      // Don't fail the request, password was updated successfully
+      console.log('⚠️ Password updated but email confirmation failed');
+    } else {
+      console.log('✅ Email confirmed successfully');
     }
     
     console.log('✅ Password updated successfully');
