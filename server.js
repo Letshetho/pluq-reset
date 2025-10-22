@@ -45,23 +45,21 @@ app.post('/api/auth/reset-password', async (req, res) => {
       });
     }
     
-    // Find the user by email
+    // Find the user by email using getUserByEmail
     console.log('🔐 Finding user by email...');
-    const { data: users, error: findError } = await supabase.auth.admin.listUsers();
+    const { data: user, error: findError } = await supabase.auth.admin.getUserByEmail(email);
     
     if (findError) {
-      console.error('❌ Error finding users:', findError);
+      console.error('❌ Error finding user:', findError);
       return res.status(500).json({ error: 'Failed to find user' });
     }
     
-    const user = users.users.find(u => u.email === email);
-    
-    if (!user) {
+    if (!user || !user.user) {
       console.error('❌ User not found:', email);
       return res.status(404).json({ error: 'User not found' });
     }
     
-    console.log('✅ User found:', user.id);
+    console.log('✅ User found:', user.user.id);
     
     // In a real app, you would verify the token against your database
     // For now, we'll accept any token and update the password
@@ -69,8 +67,11 @@ app.post('/api/auth/reset-password', async (req, res) => {
     // Update the user's password using admin API
     console.log('🔐 Updating password...');
     const { data, error } = await supabase.auth.admin.updateUserById(
-      user.id,
-      { password: newPassword }
+      user.user.id,
+      { 
+        password: newPassword,
+        email_confirmed_at: new Date().toISOString()  // Confirm email after password reset
+      }
     );
     
     if (error) {
