@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: pluq-password-reset-api
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false # Set this in Render dashboard
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false # Set this in Render dashboard
+      - key: PORT
+        value: 3001
