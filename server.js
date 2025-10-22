@@ -45,21 +45,44 @@ app.post('/api/auth/reset-password', async (req, res) => {
       });
     }
     
-    // Find the user by email using getUserByEmail
+    // Find the user by email using listUsers with pagination
     console.log('🔐 Finding user by email...');
-    const { data: user, error: findError } = await supabase.auth.admin.getUserByEmail(email);
+    let user = null;
+    let page = 1;
+    const perPage = 1000; // Get more users per page
     
-    if (findError) {
-      console.error('❌ Error finding user:', findError);
-      return res.status(500).json({ error: 'Failed to find user' });
+    while (!user) {
+      const { data: users, error: findError } = await supabase.auth.admin.listUsers({
+        page: page,
+        perPage: perPage
+      });
+      
+      if (findError) {
+        console.error('❌ Error finding users:', findError);
+        return res.status(500).json({ error: 'Failed to find user' });
+      }
+      
+      // Look for the user in this batch
+      const foundUser = users.users.find(u => u.email === email);
+      if (foundUser) {
+        user = foundUser;
+        break;
+      }
+      
+      // If we got fewer users than requested, we've reached the end
+      if (users.users.length < perPage) {
+        break;
+      }
+      
+      page++;
     }
     
-    if (!user || !user.user) {
+    if (!user) {
       console.error('❌ User not found:', email);
       return res.status(404).json({ error: 'User not found' });
     }
     
-    console.log('✅ User found:', user.user.id);
+    console.log('✅ User found:', user.id);
     
     // In a real app, you would verify the token against your database
     // For now, we'll accept any token and update the password
@@ -67,7 +90,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
     // Update the user's password using admin API
     console.log('🔐 Updating password...');
     const { data, error } = await supabase.auth.admin.updateUserById(
-      user.user.id,
+      user.id,
       { 
         password: newPassword,
         email_confirmed_at: new Date().toISOString()  // Confirm email after password reset
